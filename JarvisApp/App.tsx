@@ -82,6 +82,8 @@ const App = () => {
   const [manualInput, setManualInput] = useState('');
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [showCommands, setShowCommands] = useState(false);
+  const [systemStats, setSystemStats] = useState<any>(null);
+
 
   // Core visual animations for Arc Reactor 3D rotation
   const rotateXAnim = useRef(new Animated.Value(0)).current;
@@ -119,6 +121,18 @@ const App = () => {
         setIsListening(false);
       };
     }
+
+    const statsInterval = setInterval(async () => {
+      try {
+        const resp = await fetch('http://localhost:7475/api/system');
+        const data = await resp.json();
+        setSystemStats(data);
+      } catch (e) {
+        console.error("Failed to fetch system stats", e);
+      }
+    }, 3000);
+
+    return () => clearInterval(statsInterval);
   }, []);
 
   // Breathing Pulse (Faster when listening)
@@ -228,7 +242,16 @@ const App = () => {
 
       {/* ─── HEADER (Glass) ─── */}
       <View style={[styles.header]}>
-        <View style={styles.headerLeft}></View>
+        <View style={styles.headerLeft}>
+          {systemStats && (
+            <View style={[styles.sysBadge, glassStyle, { borderColor: currentHue }]}>
+              <Activity size={14} color={currentHue} />
+              <Text style={[styles.sysBadgeText, { color: currentHue }]}>
+                CPU: {systemStats.cpu.usage.toFixed(1)}% | RAM: {systemStats.memory.usedPercent.toFixed(1)}%
+              </Text>
+            </View>
+          )}
+        </View>
 
         <View style={styles.headerRight}>
           <TouchableOpacity onPress={() => setShowCommands(!showCommands)} style={[styles.cmdBtn, heavyGlassStyle, { borderColor: THEME.border }]}>
@@ -295,6 +318,73 @@ const App = () => {
       </View>
 
       <Text style={[styles.jarvisBrand, { color: currentHue }]}>J.A.R.V.I.S.</Text>
+
+      {/* ─── LIVE SYSTEM MONITOR (Left Sidebar) ─── */}
+      {systemStats && (
+        <View style={[styles.sideStats, heavyGlassStyle, { borderColor: currentHue }]}>
+          <View style={styles.statRow}>
+            <Cpu size={16} color={currentHue} />
+            <View style={{ flex: 1 }}>
+              <View style={styles.statLabelRow}>
+                <Text style={styles.statLabel}>CORE LOAD</Text>
+                <Text style={[styles.statValue, { color: currentHue }]}>{systemStats.cpu.usage.toFixed(1)}%</Text>
+              </View>
+              <View style={styles.statBarBg}>
+                <View style={[styles.statBarFill, { width: `${systemStats.cpu.usage}%`, backgroundColor: currentHue }]} />
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.statRow}>
+            <Activity size={16} color={currentHue} />
+            <View style={{ flex: 1 }}>
+              <View style={styles.statLabelRow}>
+                <Text style={styles.statLabel}>MEMORY</Text>
+                <Text style={[styles.statValue, { color: currentHue }]}>{systemStats.memory.usedPercent.toFixed(1)}%</Text>
+              </View>
+              <View style={styles.statBarBg}>
+                <View style={[styles.statBarFill, { width: `${systemStats.memory.usedPercent}%`, backgroundColor: currentHue }]} />
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.statRow}>
+            <HardDrive size={16} color={currentHue} />
+            <View style={{ flex: 1 }}>
+              <View style={styles.statLabelRow}>
+                <Text style={styles.statLabel}>DISK</Text>
+                <Text style={[styles.statValue, { color: currentHue }]}>{systemStats.disk.usedPercent.toFixed(1)}%</Text>
+              </View>
+              <View style={styles.statBarBg}>
+                <View style={[styles.statBarFill, { width: `${systemStats.disk.usedPercent}%`, backgroundColor: currentHue }]} />
+              </View>
+            </View>
+          </View>
+
+          {systemStats.battery && (
+            <View style={styles.statRow}>
+              <Zap size={16} color={currentHue} />
+              <View style={{ flex: 1 }}>
+                <View style={styles.statLabelRow}>
+                  <Text style={styles.statLabel}>POWER</Text>
+                  <Text style={[styles.statValue, { color: currentHue }]}>{systemStats.battery.percent}% {systemStats.battery.isCharging ? '▲' : ''}</Text>
+                </View>
+                <View style={styles.statBarBg}>
+                  <View style={[styles.statBarFill, { width: `${systemStats.battery.percent}%`, backgroundColor: currentHue }]} />
+                </View>
+              </View>
+            </View>
+          )}
+
+          <View style={[styles.divider, { backgroundColor: THEME.border }]} />
+
+          <View style={styles.miniInfo}>
+            <Text style={styles.miniInfoText}>UPTIME: {Math.floor(systemStats.uptime / 3600)}H {Math.floor((systemStats.uptime % 3600) / 60)}M</Text>
+            <Text style={styles.miniInfoText}>USER: {systemStats.user.toUpperCase()}</Text>
+            <Text style={styles.miniInfoText}>HOST: {systemStats.hostname.toUpperCase()}</Text>
+          </View>
+        </View>
+      )}
 
       {/* Hello Jarvis Trigger Button */}
       <View style={styles.triggerContainer}>
@@ -378,6 +468,27 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10
   },
   cmdBtnText: { fontSize: 11, fontWeight: '700', letterSpacing: 2, fontFamily: 'Inter' },
+  sysBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: 15, borderWidth: 1, backgroundColor: THEME.surfaceLight
+  },
+  sysBadgeText: { fontSize: 10, fontWeight: '700', fontFamily: 'JetBrains Mono' },
+
+  sideStats: {
+    position: 'absolute', left: 20, top: 120, width: 220,
+    backgroundColor: THEME.surfaceMedium, borderRadius: 20,
+    padding: 15, borderWidth: 1, zIndex: 10,
+  },
+  statRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  statLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  statLabel: { color: THEME.textSecondary, fontSize: 9, fontWeight: '800', letterSpacing: 1 },
+  statValue: { fontSize: 10, fontWeight: '700', fontFamily: 'JetBrains Mono' },
+  statBarBg: { height: 3, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' },
+  statBarFill: { height: '100%', borderRadius: 2 },
+  divider: { height: 1, marginVertical: 10 },
+  miniInfo: { gap: 4 },
+  miniInfoText: { color: THEME.textSecondary, fontSize: 8, fontWeight: '600', letterSpacing: 1, fontFamily: 'JetBrains Mono' },
 
   // System/Command Panels
   overlayPanel: {
