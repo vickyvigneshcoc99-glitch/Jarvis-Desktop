@@ -1,0 +1,39 @@
+{
+  "name": "jarvis-app",
+  "version": "1.0.0",
+  "private": true,
+  "main": "electron-main.js",
+  "scripts": {
+    "dev": "vite",
+    "web": "vite",
+    "brain": "node jarvis-brain.js",
+    "dev:all": "npx concurrently \"npm run dev\" \"npm run brain\"",
+    "desktop": "npx cross-env NODE_ENV=development npx concurrently \"npm run web\" \"npx wait-on http://localhost:5173 && npx electron .\"",
+    "build": "vite build",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "lucide-react": "^0.575.0",
+    "node-os-utils": "^2.0.1",
+    "react": "^19.2.3",
+    "react-native-web": "^0.21.2",
+    "screenshot-desktop": "^1.15.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.3",
+    "@types/react-test-renderer": "^19.1.0",
+    "@vitejs/plugin-react": "^5.1.4",
+    "concurrently": "^9.2.1",
+    "electron": "^34.5.8",
+    "react-dom": "^19.2.4",
+    "react-test-renderer": "^19.2.4",
+    "typescript": "^5.8.3",
+    "vite": "^7.3.1",
+    "vitest": "^3.0.5",
+    "jsdom": "^26.0.0",
+    "wait-on": "^9.0.4"
+  }
+}
